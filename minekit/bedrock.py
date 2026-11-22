@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import sys
 import uuid
 from dataclasses import dataclass
@@ -78,9 +79,33 @@ def dependency_report(packs: list[Pack]) -> list[str]:
     return notes
 
 
-def import_pack(path: Path):
+def check_engine(packs: list[Pack], game_version: str) -> list[str]:
+    """A minimum engine check is only a lower bound, not a runtime guarantee."""
+    def version(value):
+        if not re.fullmatch(r"[0-9]+(?:\.[0-9]+){1,3}", value):
+            return None
+        parts = tuple(map(int, value.split(".")))
+        return parts + (0,) * (4 - len(parts))
+    if not game_version.strip():
+        return ["Game version not specified; minimum engine compatibility unverified."]
+    installed = version(game_version.strip())
+    if installed is None:
+        raise MineKitError("Enter a numeric Bedrock game version such as 1.21.100.")
+    notes = []
+    for pack in packs:
+        minimum = version(pack.minimum_engine)
+        if minimum is None:
+            notes.append(f"{pack.name}: minimum engine unknown.")
+        elif installed < minimum:
+            raise MineKitError(f"{pack.name} requires Bedrock {pack.minimum_engine} or newer; selected {game_version}.")
+        else:
+            notes.append(f"{pack.name}: minimum engine requirement satisfied; runtime compatibility not guaranteed.")
+    return notes
+
+
+def import_pack(path: Path, game_version: str = ""):
     """Use Minecraft's registered file handler, leaving world activation to it."""
-    inspect_pack(path)
+    check_engine(inspect_pack(path), game_version)
     if sys.platform != "win32":
         raise MineKitError("Bedrock native import is supported on Windows only.")
     os.startfile(str(path.resolve()))  # type: ignore[attr-defined]

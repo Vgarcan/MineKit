@@ -9,6 +9,19 @@ permissions:
   contents: read
 
 jobs:
+  live-catalog:
+    runs-on: ubuntu-latest
+    # Record provider outages separately from deterministic tests/builds.
+    continue-on-error: true
+    env:
+      MINEKIT_LIVE_TEST: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -p test_live_modrinth.py -v
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -28,7 +41,8 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m unittest discover -s tests -v
-      - run: python -m pip install pyinstaller
+      - run: python -m pip install pyinstaller pillow
+      - run: python -c "from main import MineKit; app = MineKit(); app.update_idletasks(); app.destroy()"
       - run: python -m PyInstaller --onefile --windowed --name MineKit main.py
       - uses: actions/upload-artifact@v4
         with:

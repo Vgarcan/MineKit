@@ -119,7 +119,7 @@ class FileTests(unittest.TestCase):
         raw = data.getvalue()
         class Response(io.BytesIO):
             def geturl(self): return "https://cdn.modrinth.com/test.jar"
-        with tempfile.TemporaryDirectory() as temp, patch("minekit.modrinth.urlopen", side_effect=lambda *a, **k: Response(raw)):
+        with tempfile.TemporaryDirectory() as temp, patch("minekit.modrinth._open_cdn", side_effect=lambda *a, **k: Response(raw)):
             p = Path(temp)
             item = Download("a", "v", "A", "a.jar", "https://cdn.modrinth.com/test.jar", hashlib.sha512(raw).hexdigest(), len(raw), "mod")
             download_file(item, p / "good")
